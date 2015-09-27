@@ -1,0 +1,597 @@
+program CannonMnomacierzy;
+(* *************************************************** *)
+(* Cannona mnożenie macierzy,  zmodyfikowane        *)
+(* i   na strukturze  tablica tablic                *)
+(*  ponadto, uzyjemy alien call i procesow,           *)
+(*   A, B i C sa typu Q = arrayof arrayof P =       *)
+(*        arrayof arrayof arrayof arrayof real    *)
+(*   ********************************************** *)
+   var k: integer;
+   unit P: class(rozm:integer);
+      var T: arrayof arrayof real,
+          i: integer;
+      unit add: function(x: P): P;
+          var i,j: integer;
+      begin
+          result:= new P(rozm);
+          for i := 1 to rozm do
+              for j := 1 to rozm do
+                  result.T(i,j) := T(i,j) + x.T(i,j)
+              od
+          od;
+      end add;
+      unit mult: function(x: P): P;
+          var i,j,k:integer, s: real;
+      begin
+          result:= new P(rozm);
+          for i := 1 to rozm do
+              for j := 1 to rozm do
+                  s:=0;
+                  for k := 1 to rozm do
+                      s := s + T(i,k) * x.T(k,j)
+                  od;
+                  result.T(i,j) := s                 
+              od
+          od;      
+      end mult;
+      unit drukuj: procedure;
+          var i,j: integer;
+      begin
+        for i := 1 to rozm do
+            for j := 1 to rozm do
+              write(T(i,j))
+            od;
+            writeln
+        od
+      end drukuj;
+     
+      unit jedynka: procedure; (* wstaw 1 na diagonale *)
+          var i,j: integer;
+      begin
+          for i :=1 to rozm do
+              for j:=1 to rozm do
+                if i=j then T(i,j):=1 else T(i,j):=0 fi
+              od
+          od
+      end jedynka;
+      unit kolejne: procedure; (* wstaw k+1 *)
+          var i,j: integer;
+      begin
+          for i :=1 to rozm do
+              for j:=1 to rozm do
+                T(i,j):=k;
+                k := k+1
+              od
+          od
+      end kolejne;   
+      unit zero: procedure; (* wstaw 0 *)
+          var i,j, k: integer;
+      begin
+          k :=0;
+          for i :=1 to rozm do
+              for j:=1 to rozm do
+                T(i,j):=k;
+              od
+          od
+      end zero;  
+   begin
+      array T dim(1: rozm);
+      for i:=1 to rozm do array T(i) dim (1:rozm) od;
+   end P;
+   (*   **  byłoby wygodnie gdyby tablica była obiektem klasy  *)
+   (*   ***************************************************   *)
+   
+   unit Q: class(rozm,rozm2:integer);
+      var T: arrayof arrayof P,
+          i, j: integer;
+      unit add: function(x: Q): Q;
+          var i,j: integer;
+      begin
+          result:= new Q(rozm,rozm2);
+          for i := 1 to rozm do
+              for j := 1 to rozm do
+                  result.T(i,j) := T(i,j).add( x.T(i,j))
+              od
+          od;
+      end add;
+      unit mult: function(x: Q): Q;
+          var i,j,k:integer, s: P;
+      begin
+          result:= new Q(rozm,rozm2);
+          for i := 1 to rozm do
+              for j := 1 to rozm do
+                  s:=new P(rozm2);
+                  for k := 1 to rozm do
+                      s := s.add( T(i,k).mult(x.T(k,j)))
+                  od;
+                  result.T(i,j) := s                 
+              od
+          od;      
+      end mult;
+      unit drukuj: procedure;
+        var i,j,m,l: integer;
+      begin    
+            for i:= 1 to rozm do
+              for m :=1 to rozm2 do
+                for j :=1 to rozm do
+                  for l :=1 to rozm2 do
+                      write(T(i,j).T(m,l):5:0);
+                  od;write("  ")     
+                od;
+                writeln;
+              od;
+              writeln; writeln;
+            od ;
+      end drukuj;   
+   begin
+      array T dim(1: rozm);
+      for i:=1 to rozm do array T(i) dim (1:rozm) od;
+      for i := 1 to rozm do
+        for j:= 1 to rozm do
+            T(i,j):= new P(rozm2)
+        od
+      od
+   end Q;
+   (*
+   unit Tabela: process(node:integer);
+      var Tab: Q;
+      unit podajsekcje: procedure(row,col: integer, komu: mnoznik);
+      begin
+              hfont8(1001,this, komu, ...
+      end podajsekcje;
+      unit przyjmijsekcję: procedure(i,j, );
+      begin
+      end przyjmijsekcje;
+      unit fin: procedure; begin continue := false end fin;
+      var continue: boolean;
+   begin
+    continue := true;
+    return;
+     
+    while continue do
+          accept przyjmijsekcje, podajsekcje, fin;
+    od;
+   end tabela;
+*)
+(*
+   unit mnożnik: process(node, i, j: integer, A,B,C: tabela);
+    ( *   zadaniem takiego procesu jest obliczenie iloczynu
+          i-ty wiersz z tabeli A razy j-ta kolumna z tabeli B
+          i wpisanie wyniku na miejsce (i,j) w tabeli C  * )
+      var s, x, y:P, k: integer;    
+   begin
+    return;
+     
+    s := new P;
+    for k:= 1 to n do
+        call A.podajsekcję(i,k,x);
+        call B.podajsekcję(k,j,y);
+        s :=s.add(x.mult(y));
+    od;
+    call C.przyjmijsekcje(i,j,s);
+     
+    ( *  zakoncz  *)
+    call portier.koniec;
+   end mnoznik;
+   * )
+  var A,B,C:  tabela, D: mnoznik,   i,j,m,l,n,n2:integer;
+  var portier:Licznik;
+    
+  unit Licznik: process(node:integer), ile:integer;
+      var i: integer;
+      unit koniec:procedure;  end koniec;
+  begin
+      for i := 1 to n*n do accept koniec od;
+       
+  end Licznik;
+(*   **********************  main  ***********************)
+begin
+    writeln("Witam, program realizujący alg. Cannona");
+    writeln("tablice beda miec n x n sekcji, podaj  n=", );
+            readln(n);
+            writeln(“rozmiar kazdej sekcji n2 x n2, podaj n2=  “);
+            readln(n2);
+            writeln(“ ile masz procesorów? (mozesz mieć 1) pr=”);
+    readln(pr);
+    portier := new Licznik(0,n);
+    resume(portier);
+    (* utwórz dwa procesy A i B typu tabela i je napełnij  *)
+    A := new Tabela(0,portier);
+    resume(A);
+    B := new Tabela(0,portier);
+    resume(B);
+      (* napełnij danymi *)
+    (* utwórz proces C typu tabela  *)
+    C := new Tabela(0,portier);
+    resume(C);   
+    (*  utwórz i uruchom n^2 procesów typu mnoznik *)
+    for i := 1 to n do
+           for j := 1 to n do
+                  D := new mnoznik(0,i,j, );
+                  resume(D)
+           od
+    od;
+    (* zakoncz *)
+
+    call portier.zakonczono;
+    call A.fin;
+    call B.fin;
+
+    (* wydrukuj wynik *)
+                     ...
+    call C.fin;
+end program
+--------------------------------------------------------------
+to jest na zapas, a nuż się przyda
+
+  (* utworz obiekty (tablice)  A i B *)
+  (* tablica B to jedynka *)
+    n:=3 ; n2:=6;
+    k:=1;
+  writeln("Mno\.zenie 2 macierzy - prep. Cannon, n=", n:2,", n2=",n2:2);
+  B := new Q(n,n2);
+  for i:= 1 to n do
+      for j := 1 to n do           
+          for m:=1 to n2 do
+            for l := 1 to n2 do
+              if m=l and i=j then B.T(i,j).T(m,l) :=1
+              else   B.T(i,j).T(m,l):=0
+              fi
+            od
+          od  
+      od
+  od;
+  (* drukuj tablice B *)
+  writeln("tablica B");    
+  for i:= 1 to n do
+  for m :=1 to n2 do
+   
+    for j :=1 to n do
+    for l :=1 to n2 do
+      write(B.T(i,j).T(m,l):5:0);
+    od;write("  ")
+     
+    od;
+    writeln;
+  od;
+  writeln; writeln;
+  od ;
+     
+    
+  (* tablica A to kolejne liczby *)
+  A := new Q(n,n2);
+  for i:= 1 to n do
+      for j := 1 to n do           
+              call A.T(i,j).kolejne
+      od
+  od;  
+  (* drukuj tablice A *)
+  writeln("tablica A");    
+  for i:= 1 to n do
+  for m :=1 to n2 do
+   
+    for j :=1 to n do
+    for l :=1 to n2 do
+      write(A.T(i,j).T(m,l):5:0);
+    od;write("  ")
+     
+    od;
+    writeln;
+  od;
+  writeln; writeln;
+  od ;
+    
+  C:=A.mult(B);
+  (*  *)
+    (* drukuj tablice C *)
+  writeln("tablica C");    
+  for i:= 1 to n do
+  for m :=1 to n2 do
+   
+    for j :=1 to n do
+    for l :=1 to n2 do
+      write(C.T(i,j).T(m,l):5:0);
+    od;write("  ")
+     
+    od;
+    writeln;
+  od;
+  writeln; writeln;
+  od ;
+    
+end programprogram CannonMnomacierzy;
+(* *************************************************** *)
+(* Cannona mnożenie macierzy,  zmodyfikowane        *)
+(* i   na strukturze  tablica tablic                *)
+(*  ponadto, uzyjemy alen call i procesow,          *)
+(*   A, B i C sa typu Q = arrayof arrayof P =       *)
+(*        arrayof arrayof arrayof arrayof real    *)
+(*   ********************************************** *)
+   var k: integer;
+   unit P: class(rozm:integer);
+      var T: arrayof arrayof real,
+          i: integer;
+      unit add: function(x: P): P;
+          var i,j: integer;
+      begin
+          result:= new P(rozm);
+          for i := 1 to rozm do
+              for j := 1 to rozm do
+                  result.T(i,j) := T(i,j) + x.T(i,j)
+              od
+          od;
+      end add;
+      unit mult: function(x: P): P;
+          var i,j,k:integer, s: real;
+      begin
+          result:= new P(rozm);
+          for i := 1 to rozm do
+              for j := 1 to rozm do
+                  s:=0;
+                  for k := 1 to rozm do
+                      s := s + T(i,k) * x.T(k,j)
+                  od;
+                  result.T(i,j) := s                 
+              od
+          od;      
+      end mult;
+      unit drukuj: procedure;
+          var i,j: integer;
+      begin
+        for i := 1 to rozm do
+            for j := 1 to rozm do
+              write(T(i,j))
+            od;
+            writeln
+        od
+      end drukuj;
+     
+      unit jedynka: procedure; (* wstaw 1 na diagonale *)
+          var i,j: integer;
+      begin
+          for i :=1 to rozm do
+              for j:=1 to rozm do
+                if i=j then T(i,j):=1 else T(i,j):=0 fi
+              od
+          od
+      end jedynka;
+      unit kolejne: procedure; (* wstaw k+1 *)
+          var i,j: integer;
+      begin
+          for i :=1 to rozm do
+              for j:=1 to rozm do
+                T(i,j):=k;
+                k := k+1
+              od
+          od
+      end kolejne;   
+      unit zero: procedure; (* wstaw 0 *)
+          var i,j, k: integer;
+      begin
+          k :=0;
+          for i :=1 to rozm do
+              for j:=1 to rozm do
+                T(i,j):=k;
+              od
+          od
+      end zero;  
+   begin
+      array T dim(1: rozm);
+      for i:=1 to rozm do array T(i) dim (1:rozm) od;
+   end P;
+   (*   **  byłoby wygodnie by tablica była obiektem klasy  *)
+   (*   ***************************************************   *)
+   
+   unit Q: class(rozm,rozm2:integer);
+      var T: arrayof arrayof P,
+          i, j: integer;
+      unit add: function(x: Q): Q;
+          var i,j: integer;
+      begin
+          result:= new Q(rozm,rozm2);
+          for i := 1 to rozm do
+              for j := 1 to rozm do
+                  result.T(i,j) := T(i,j).add( x.T(i,j))
+              od
+          od;
+      end add;
+      unit mult: function(x: Q): Q;
+          var i,j,k:integer, s: P;
+      begin
+          result:= new Q(rozm,rozm2);
+          for i := 1 to rozm do
+              for j := 1 to rozm do
+                  s:=new P(rozm2);
+                  for k := 1 to rozm do
+                      s := s.add( T(i,k).mult(x.T(k,j)))
+                  od;
+                  result.T(i,j) := s                 
+              od
+          od;      
+      end mult;
+      unit drukuj: procedure;
+        var i,j,m,l: integer;
+      begin    
+            for i:= 1 to rozm do
+              for m :=1 to rozm2 do
+                for j :=1 to rozm do
+                  for l :=1 to rozm2 do
+                      write(T(i,j).T(m,l):5:0);
+                  od;write("  ")     
+                od;
+                writeln;
+              od;
+              writeln; writeln;
+            od ;
+      end drukuj;   
+   begin
+      array T dim(1: rozm);
+      for i:=1 to rozm do array T(i) dim (1:rozm) od;
+      for i := 1 to rozm do
+        for j:= 1 to rozm do
+            T(i,j):= new P(rozm2)
+        od
+      od
+   end Q;
+   (*
+   unit Tabela: process(node:integer);
+      var Tab: Q;
+      unit podajsekcje: procedure(i,j: integer, komu: mnoznik);
+      begin
+      end podajsekcje;
+      unit przyjmijsekcję: procedure(i,j, );
+      begin
+      end przyjmijsekcje;
+      unit fin: procedure; begin continue := false end fin;
+      var continue: boolean;
+   begin
+    continue := true;
+    return;
+     
+    while continue do
+          accept przyjmijsekcje, podajsekcje, fin;
+    od;
+   end tabela;
+*)
+(*
+   unit mnożnik: process(node, i, j: integer, A,B,C: tabela);
+    ( *   zadaniem takiego procesu jest obliczenie iloczynu
+          i-ty wiersz z tabeli A razy j-ta kolumna z tabeli B
+          i wpisanie wyniku na miejsce (i,j) w tabeli C  * )
+      var s, x, y:P, k: integer;    
+   begin
+    return;
+     
+    s := new P;
+    for k:= 1 to n do
+        call A.podajsekcję(i,k,x);
+        call B.podajsekcję(k,j,y);
+        s :=s.add(x.mult(y));
+    od;
+    call C.przyjmijsekcje(i,j,s);
+     
+    ( *  zakoncz  *)
+    call portier.koniec;
+   end mnoznik;
+   * )
+  var A,B,C:  tabela, D: mnoznik,   i,j,m,l,n,n2:integer;
+  var portier:Licznik;
+    
+  unit Licznik: process(node:integer), ile:integer;
+      var i: integer;
+      unit koniec:procedure;  end koniec;
+  begin
+      for i := 1 to n*n do accept koniec od;
+       
+  end Licznik;
+(*   **********************  main  ***********************)
+begin
+    writeln("Witam, program realizujący alg. Cannona");
+    writeln("podaj pierwiatek z liczby procesorów (wirtualnych), n=");
+    readln(n);
+    portier := new Licznik(0,n);
+    resume(portier);
+    (* utwórz dwa procesy A i B typu tabela i je napełnij  *)
+    A := new Tabela(0,portier);
+    resume(A);
+    B := new Tabela(0,portier);
+    resume(B);
+      (* napełnij danymi *)
+    (* utwórz proces C typu tabela  *)
+    C := new Tabela(0,portier);
+    resume(C);   
+    (*  utwórz i uruchom n^2 procesów typu mnoznik *)
+    for i := 1 to n do
+        for j := 1 to n do
+            D := new mnoznik(0,i,j, );
+            resume(D)
+        od
+    od;
+    (* zakoncz *)
+
+    call portier.zakonczono;
+    call A.fin;
+    call B.fin;
+
+    (* wydrukuj wynik *)
+
+    call C.fin;
+end program
+
+
+  (* utworz obiekty (tablice)  A i B *)
+  (* tablica B to jedynka *)
+    n:=3 ; n2:=6;
+    k:=1;
+  writeln("Mno\.zenie 2 macierzy - prep. Cannon, n=", n:2,", n2=",n2:2);
+  B := new Q(n,n2);
+  for i:= 1 to n do
+      for j := 1 to n do           
+          for m:=1 to n2 do
+            for l := 1 to n2 do
+              if m=l and i=j then B.T(i,j).T(m,l) :=1
+              else   B.T(i,j).T(m,l):=0
+              fi
+            od
+          od  
+      od
+  od;
+  (* drukuj tablice B *)
+  writeln("tablica B");    
+  for i:= 1 to n do
+  for m :=1 to n2 do
+   
+    for j :=1 to n do
+    for l :=1 to n2 do
+      write(B.T(i,j).T(m,l):5:0);
+    od;write("  ")
+     
+    od;
+    writeln;
+  od;
+  writeln; writeln;
+  od ;
+     
+    
+  (* tablica A to kolejne liczby *)
+  A := new Q(n,n2);
+  for i:= 1 to n do
+      for j := 1 to n do           
+              call A.T(i,j).kolejne
+      od
+  od;  
+  (* drukuj tablice A *)
+  writeln("tablica A");    
+  for i:= 1 to n do
+  for m :=1 to n2 do
+   
+    for j :=1 to n do
+    for l :=1 to n2 do
+      write(A.T(i,j).T(m,l):5:0);
+    od;write("  ")
+     
+    od;
+    writeln;
+  od;
+  writeln; writeln;
+  od ;
+    
+  C:=A.mult(B);
+  (*  *)
+    (* drukuj tablice C *)
+  writeln("tablica C");    
+  for i:= 1 to n do
+  for m :=1 to n2 do
+   
+    for j :=1 to n do
+    for l :=1 to n2 do
+      write(C.T(i,j).T(m,l):5:0);
+    od;write("  ")
+     
+    od;
+    writeln;
+  od;
+  writeln; writeln;
+  od ;
+    
+end program
